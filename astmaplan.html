@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astmaplan</title>
+</head>
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: skjema til venstre, A4-forhåndsvisning til høyre; ved utskrift vises bare planen. */
+:root{
+  --blue:#003283; --blue-soft:#E8EFF6; --line:#8FA9C4;
+  --green:#2F654A; --green-bg:#EEF4F0; --yellow:#E3A611; --yellow-bg:#FDF6E3; --red:#BD0C2E; --red-bg:#FBEDEF;
+  --bg:#F3F6FA; --panel:#FFFFFF; --fg:#18212E; --muted:#556171; --border:#C9D4E2; --field:#FFFFFF; --hint:#F5F8FC;
+  --paper:#FFFFFF; --ink:#111111; --paper-muted:#4A5560; --hl:#D6E2F3;
+  --font:Calibri, Carlito, "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1724; --panel:#172234; --fg:#E6ECF4; --muted:#9FB0C6; --border:#2C3D57; --field:#0F1A2A; --hint:#1B2940; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#0F1724; --panel:#172234; --fg:#E6ECF4; --muted:#9FB0C6; --border:#2C3D57; --field:#0F1A2A; --hint:#1B2940; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg); color:var(--fg); font-family:var(--font); font-size:15px; line-height:1.4; -webkit-font-smoothing:antialiased}
+.top{background:var(--blue); color:#fff; padding-block:14px; padding-left:max(24px, env(safe-area-inset-left,0px)); padding-right:max(24px, env(safe-area-inset-right,0px)); display:flex; flex-wrap:wrap; gap:4px 24px; align-items:flex-end; justify-content:space-between}
+.top h1{font-size:24px; margin:0; font-weight:700; letter-spacing:.2px}
+.top p{margin:2px 0 0; font-size:14px; opacity:.85}
+.top .clinic{font-size:13px; opacity:.8; text-align:right}
+.wrap{display:grid; grid-template-columns:minmax(0,460px) minmax(0,1fr); gap:28px; padding-block:20px; padding-left:max(24px, env(safe-area-inset-left,0px)); padding-right:max(24px, env(safe-area-inset-right,0px)); max-width:1500px; margin:0 auto}
+form{display:flex; flex-direction:column; gap:16px; min-width:0}
+fieldset{background:var(--panel); border:1px solid var(--border); border-top:3px solid var(--blue); margin:0; padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; min-width:0}
+legend{float:left; width:100%; font-weight:700; color:var(--fg); padding:0; margin:0 0 2px; font-size:16px; display:flex; align-items:center; gap:8px}
+legend+*{clear:both}
+legend b{display:inline-grid; place-items:center; background:var(--blue); color:#fff; width:24px; height:24px; font-size:14px}
+label{font-size:13px; color:var(--muted); display:flex; flex-direction:column; gap:4px; min-width:0}
+input,select,textarea{font:inherit; font-size:14.5px; color:var(--fg); background:var(--field); border:1px solid var(--border); padding:0 10px; min-width:0; width:100%; transition:border-color .15s, box-shadow .15s}
+input,select{height:38px}
+textarea{padding:8px 10px}
+input::placeholder{color:var(--muted); opacity:.7}
+input:hover,select:hover,textarea:hover{border-color:var(--line)}
+input[type=checkbox],input[type=radio]{width:16px; height:16px; margin:0; accent-color:var(--blue); flex:none}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,50,131,.18)}
+button:focus-visible{outline:3px solid rgba(0,50,131,.35); outline-offset:2px}
+.row{display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(120px,1fr))}
+.chk{flex-direction:row; align-items:center; gap:8px; color:var(--fg); font-size:14px; cursor:pointer}
+.seg{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; border:1px solid var(--border); background:var(--field)}
+.seg label{flex-direction:row; justify-content:center; align-items:center; gap:0; padding:9px 6px; color:var(--fg); cursor:pointer; font-size:14.5px; font-weight:600; transition:background .15s, color .15s}
+.seg label+label{border-left:1px solid var(--border)}
+.seg input{position:absolute; opacity:0; pointer-events:none}
+.seg label:has(input:checked){background:var(--blue); color:#fff}
+.seg label:has(input:focus-visible){box-shadow:inset 0 0 0 3px rgba(79,127,208,.6)}
+.med{border:1px solid var(--border); border-left:3px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:8px; background:var(--hint)}
+.med .row{grid-template-columns:minmax(0,2.2fr) minmax(0,1.3fr)}
+.med .row.n{grid-template-columns:repeat(3, minmax(0,1fr))}
+.hint{font-size:12.5px; color:var(--muted); line-height:1.35}
+.hint:empty{display:none}
+.hint.warn{color:var(--red); font-weight:600}
+.hint.ok{color:var(--green)}
+:root:not([data-theme="light"]) .hint.ok{color:var(--muted)}
+.sub{font-weight:700; font-size:12px; letter-spacing:.6px; text-transform:uppercase; color:var(--blue); margin-top:4px}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .sub{color:var(--muted)} }
+:root[data-theme="dark"] .sub{color:var(--muted)}
+.btns{display:flex; flex-wrap:wrap; gap:8px}
+button{font:inherit; font-size:14.5px; font-weight:600; padding:9px 16px; border:1px solid var(--blue); background:var(--blue); color:#fff; cursor:pointer; transition:background .15s, border-color .15s, transform .05s}
+button:hover{background:#00266A}
+button:active{transform:translateY(1px)}
+button.ghost{background:transparent; color:var(--fg); border-color:var(--border); font-weight:400}
+button.ghost:hover{border-color:var(--line); background:var(--hint)}
+button.link{background:none; border:none; padding:4px 0; color:var(--muted); font-weight:400; text-decoration:underline; text-underline-offset:3px}
+button.link:hover{color:var(--fg); background:none}
+.alert{background:var(--panel); border:1px solid var(--border); border-left:5px solid var(--red); padding:10px 14px; font-size:13.5px; display:flex; flex-direction:column; gap:6px}
+.alert[hidden]{display:none}
+.alert.dop{border-left-color:var(--yellow)}
+.alert.info{border-left-color:var(--blue); background:var(--hint)}
+.alert.done{border-left-color:var(--green)}
+.alert h3{margin:0; font-size:14px}
+.alert ul{margin:0; padding-left:18px}
+.alert li+li{margin-top:2px}
+.alert .chk{font-size:13.5px; font-weight:600}
+.notice{font-size:13px; color:var(--muted); background:var(--panel); border:1px solid var(--border); padding:10px 14px}
+.notice summary{cursor:pointer; color:var(--fg); font-weight:600}
+.notice p{margin:6px 0 0}
+.formfoot{display:flex; justify-content:space-between; align-items:center; gap:12px}
+.previewcol{min-width:0}
+.sticky{position:sticky; top:0; max-height:100vh; overflow:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:16px}
+.pbar{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--border); padding:10px 14px; position:sticky; top:0; z-index:2}
+.pbar b{font-size:15px}
+.pbar span{font-size:13px; color:var(--muted); margin-left:6px}
+.paperwrap{background:var(--bg); padding:2px 0; overflow:hidden}
+.jbox textarea{min-height:150px; font-family:Consolas, "Courier New", monospace; font-size:12.5px; line-height:1.45; resize:vertical}
+@media (max-width:1000px){
+  .wrap{grid-template-columns:minmax(0,1fr); padding-left:16px; padding-right:16px; gap:20px}
+  .top{padding-left:16px; padding-right:16px}
+  .top .clinic{text-align:left}
+  .sticky{position:static; max-height:none; overflow:visible}
+}
+@media (max-width:420px){ .med .row, .med .row.n{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+/* ---------- A4-planen (papir, samme i lyst og mørkt tema) ---------- */
+.plan{background:var(--paper); color:var(--ink); width:210mm; min-height:297mm; padding:9mm 10mm 8mm; margin:0 auto; font-family:var(--font); font-size:9.6pt; line-height:1.28; box-shadow:0 2px 12px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2.4mm}
+.p-band{background:var(--blue); color:#fff; display:flex; justify-content:space-between; font-size:8.5pt; padding:1.2mm 3mm; margin:-9mm -10mm 0; font-weight:600}
+.p-head{display:flex; justify-content:space-between; align-items:flex-end; gap:6mm}
+.p-head h2{color:var(--blue); font-size:20pt; margin:0; line-height:1}
+.p-head p{margin:0; color:var(--paper-muted); font-size:10pt; max-width:105mm; text-align:left}
+.p-grid{display:grid; grid-template-columns:34% 22% 22% 22%; row-gap:1.4mm}
+.p-grid.m5{grid-template-columns:34% 16.5% 16.5% 16.5% 16.5%}
+.p-grid div{padding-right:2mm; min-width:0}
+.p-grid small{display:block; color:var(--blue); font-weight:700; font-size:7.4pt}
+.p-grid span{display:block; border-bottom:0.6pt solid var(--line); min-height:4.6mm; font-size:10pt; overflow-wrap:anywhere}
+.zone{display:grid; grid-template-columns:15mm 47mm 1fr; border:1pt solid var(--zc)}
+.zone .zl{background:var(--zc); color:var(--zt); font-weight:700; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; font-size:10pt; padding:1mm}
+.zone .zl small{font-size:7.5pt; font-weight:400}
+.zone .zt{background:var(--zb); padding:1.6mm 2mm; border-right:0.5pt solid var(--zc)}
+.zone .zd{background:var(--zb); padding:1.6mm 2.4mm; display:flex; flex-direction:column; gap:1mm; min-width:0}
+.z-g{--zc:var(--green); --zb:var(--green-bg); --zt:#fff}
+.z-y{--zc:var(--yellow); --zb:var(--yellow-bg); --zt:#1A1A1A}
+.z-r{--zc:var(--red); --zb:var(--red-bg); --zt:#fff}
+.zone h4{margin:0 0 .6mm; font-size:9.6pt}
+.zone ul{margin:0; padding-left:4mm}
+.zone li{margin:0 0 .3mm}
+.step{font-weight:700; display:flex; gap:2mm; align-items:baseline}
+.step i{font-style:normal; background:var(--zc); color:var(--zt); padding:0 1.4mm}
+.step em{font-style:normal; font-weight:400; color:var(--paper-muted)}
+.mt{width:100%; border-collapse:collapse; font-size:9.4pt}
+.mt th{text-align:left; color:var(--blue); font-size:7.6pt; font-weight:700; padding:0 1mm .4mm 0}
+.mt td{border-bottom:0.6pt solid var(--line); padding:.6mm 1mm .4mm 0; vertical-align:top}
+.mt td.n{white-space:nowrap}
+.mt .note{color:var(--paper-muted); font-size:8pt}
+.fill{font-weight:700; border-bottom:0.6pt solid var(--line); padding:0 1mm; display:inline-block; min-width:7mm; text-align:center}
+.ol{margin:0; padding-left:4.5mm}
+.ol li{margin:0 0 .5mm}
+.red113{color:var(--red); font-weight:700}
+.p-bottom{display:grid; grid-template-columns:1fr 1fr; border:0.6pt solid var(--blue); background:var(--blue-soft)}
+.p-bottom>div{padding:1.8mm 2.4mm}
+.p-bottom>div+div{border-left:0.6pt solid var(--blue)}
+.p-bottom h4{margin:0 0 1mm; color:var(--blue); font-size:10pt}
+.tg{display:grid; grid-template-columns:1fr 1fr; gap:.6mm 3mm; font-size:9.2pt}
+.box{display:inline-block; width:3mm; height:3mm; border:0.6pt solid var(--line); background:#fff; margin-right:1.4mm; vertical-align:-0.4mm; text-align:center; line-height:2.6mm; font-size:8pt; font-weight:700}
+.rad{margin:0; padding-left:4mm; font-size:9.2pt}
+.rad li{margin:0 0 .5mm}
+.rad li.hl{background:var(--hl); color:var(--blue); padding:.6mm 1mm; list-style-position:inside; margin-left:-4mm; padding-left:1mm}
+.p-copy{display:flex; flex-wrap:wrap; gap:1mm 6mm; font-size:9.2pt}
+.p-foot{margin-top:auto; font-size:6.4pt; color:var(--paper-muted); display:flex; justify-content:space-between; gap:4mm; align-items:flex-end}
+.p-foot .by{color:#A7AEB6; font-size:6pt; white-space:nowrap}
+.empty{color:#9AA2AB}
+.p-qr{display:flex; align-items:center; gap:3mm; margin-top:2.4mm; font-size:9.4pt}
+.p-qr svg{width:17mm; height:17mm; flex:none}
+.p-qr small{display:block; color:var(--paper-muted); font-size:7.8pt; margin-top:.4mm}
+
+@media print{
+  @page{size:A4; margin:0}
+  body{background:#fff !important}
+  .top,form,.pbar,.alert,.hint,.notice,.jbox{display:none !important}
+  .plan{zoom:1 !important}
+  .wrap{display:block; padding:0}
+  .sticky{position:static; max-height:none; overflow:visible; padding:0}
+  .paperwrap{padding:0; overflow:visible; background:#fff}
+  .plan{box-shadow:none; margin:0; width:210mm; height:296mm; min-height:0; overflow:hidden}
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div><h1>Astmaplan</h1><p>Fyll ut skjemaet. Planen oppdateres mens du skriver.</p></div>
+  <div class="clinic">Lunge- og allergipoliklinikken · Barne- og ungdomsklinikken<br>St. Olavs hospital</div>
+</header>
+
+<div class="wrap">
+<form id="f" autocomplete="off">
+  <details class="notice" id="safety"><summary>Forslag til dose. Legen bestemmer.</summary>
+    <p>Forslagene bygger på Generell veileder i pediatri (7.8.1 og 7.8.2), Akuttveileder 7.2, GINA 2026 og Felleskatalogen. Bare Symbicort, Alvesco og Singulair er kontrollert mot Felleskatalogen. De andre er merket. Ingenting lagres. Alt forsvinner når siden lukkes.</p></details>
+
+  <fieldset>
+    <legend><b>1</b>Pasient</legend>
+    <div class="seg" role="radiogroup" aria-label="Aldersgruppe">
+      <label><input type="radio" name="age" id="age05" value="0-5"> 0–5 år</label>
+      <label><input type="radio" name="age" id="age611" value="6-11" checked> 6–11 år</label>
+      <label><input type="radio" name="age" id="age12" value="12+"> 12 år og eldre</label>
+    </div>
+    <div class="row">
+      <label>Navn<input id="navn"></label>
+      <label>Fødselsdato<input id="fdato" placeholder="dd.mm.åååå"></label>
+      <label>Vekt (kg)<input id="vekt" inputmode="decimal"></label>
+    </div>
+    <div class="row">
+      <label>Forordnende barnelege<input id="lege"></label>
+      <label>Sykepleier<input id="spl"></label>
+    </div>
+    <div class="row">
+      <label>Tlf. poliklinikken<input id="tlf"></label>
+      <label>Dato for plan<input id="dato"></label>
+      <label>Neste kontroll<input id="kontroll"></label>
+    </div>
+    <div class="sub">Siste målinger</div>
+    <div class="row">
+      <label>Dato<input id="mdato"></label>
+      <label>FEV1 (% av forv.)<input id="fev1" inputmode="decimal"></label>
+      <label>AKT<input id="akt" inputmode="numeric"></label>
+      <label id="fenoL">FeNO (ppb)<input id="feno" inputmode="numeric"></label>
+      <label>Eosinofile (×10⁹/L)<input id="eos" inputmode="decimal" placeholder="f.eks. 0,3"></label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend><b>2</b>Behandling</legend>
+    <div id="oppleggBox" class="seg" role="radiogroup" aria-label="Behandlingsopplegg">
+      <label><input type="radio" name="opplegg" id="oppTo" value="to" checked> To inhalatorer</label>
+      <label><input type="radio" name="opplegg" id="oppMart" value="mart"> MART</label>
+    </div>
+    <div class="hint" id="oppHint"></div>
+    <div class="alert info" id="remBox"><h3>Husk</h3><ul id="remList"></ul></div>
+    <div class="sub">1 Vedlikehold</div>
+    <div id="vedl"></div>
+    <div class="btns"><button type="button" class="ghost" id="addVedl">+ Legg til vedlikeholdsmedisin</button></div>
+    <div class="sub">2 Behov</div>
+    <div id="behov"></div>
+    <div id="martBox" hidden>
+      <label>Maks inhalasjoner per døgn totalt (MART)<input id="martMaks" inputmode="numeric"></label>
+      <div class="hint" id="martHint"></div>
+    </div>
+    <div id="kammerBox" class="row">
+      <label class="chk"><input type="checkbox" id="kMaske"> Kammer med maske</label>
+      <label class="chk"><input type="checkbox" id="kMunn"> Kammer med munnstykke</label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend><b>3</b>Forverring og akutt anfall</legend>
+    <div class="sub">Gul sone: opptrapping med behovsmedisin</div>
+    <div class="row">
+      <label>Puff behovsmedisin<input id="gPuff" inputmode="numeric"></label>
+      <label>Inntil hver (timer)<input id="gTimer" inputmode="numeric" value="4"></label>
+      <label>I inntil (døgn)<input id="gDogn" inputmode="numeric" value="2"></label>
+    </div>
+    <div class="hint" id="gHint"></div>
+    <div class="sub">Rød sone: akutt anfall</div>
+    <div class="row">
+      <label>Puff behovsmedisin<input id="rPuff" inputmode="numeric"></label>
+      <label>Gjenta hvert (min)<input id="rMin" inputmode="numeric" value="20"></label>
+    </div>
+    <div class="hint">Akuttveileder 7.2: salbutamol 0,1 mg/dose, 4–10 puff på kammer initialt etter alvorlighet, gjentas ca. hvert 20. minutt til klar bedring.</div>
+    <label class="chk"><input type="checkbox" id="pred"> Prednisolon etter avtale</label>
+    <div class="row" id="predRow">
+      <label>Dose (mg) x 1<input id="predMg" inputmode="decimal"></label>
+      <label>Antall dager<input id="predD" inputmode="numeric" value="3"></label>
+      <label>Tablettstyrke<select id="predTab"><option>5 mg</option><option>20 mg</option></select></label>
+    </div>
+    <div class="hint" id="predHint"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend><b>4</b>Triggere, trening og kopi</legend>
+    <div class="row" id="trigBox"></div>
+    <div class="row">
+      <label>Pollen<input id="tPollen" placeholder="f.eks. bjørk, gress"></label>
+      <label>Annet<input id="tAnnet"></label>
+    </div>
+    <label>Bekreftet allergi<input id="allergi"></label>
+    <div class="row" id="trenRow">
+      <label>Før trening: puff<input id="trPuff" inputmode="numeric"></label>
+      <label>Medisin før trening<input id="trMed"></label>
+    </div>
+    <div class="row" id="kopiBox"></div>
+    <label>Fastlege, navn og tlf.<input id="fastlege"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend><b>5</b>Journaltekst</legend>
+    <label class="jbox">Kopieres inn i journalen<textarea id="journal" readonly></textarea></label>
+    <div class="btns"><button type="button" class="ghost" id="copy2">Kopier journaltekst</button></div>
+  </fieldset>
+  <div class="formfoot">
+    <button type="button" class="link" id="example">Fyll inn eksempel</button>
+    <button type="button" class="link" id="reset">Tøm skjema</button>
+  </div>
+</form>
+
+<section class="previewcol" aria-label="Forhåndsvisning av astmaplan">
+  <div class="sticky">
+    <div class="pbar">
+      <div><b>Forhåndsvisning</b><span>A4, én side</span></div>
+      <div class="btns">
+        <button type="button" class="ghost" id="copy">Kopier journaltekst</button>
+        <button type="button" id="print">Skriv ut / lagre som PDF</button>
+      </div>
+    </div>
+    <div class="hint" id="printNote"></div>
+  <div class="alert" id="olBox" hidden>
+    <h3>Off label</h3>
+    <ul id="olList"></ul>
+    <label class="chk"><input type="checkbox" id="olOk"> Vurdert og bevisst valgt av forordnende lege (overstyr)</label>
+  </div>
+  <div class="alert dop" id="dopBox" hidden>
+    <h3>Antidoping (idrettsutøvere fra 12 år som kan bli testet)</h3>
+    <ul id="dopList"></ul>
+    <div class="hint">Etter WADAs dopingliste. Sjekk alltid preparatet i legemiddelsøket på antidoping.no. Utøvere på nasjonalt nivå må søke fritak på forhånd.</div>
+    <label class="chk"><input type="checkbox" id="dopOk"> Pasienten er informert om antidopingreglene</label>
+  </div>
+    <div class="paperwrap" id="pw"><div class="plan" id="plan"></div></div>
+  </div>
+</section>
+</div>
+
+<script>
+/* ===================== FAGLIG DATA =====================
+   Kilder: Generell veileder i pediatri 7.8.1 (≤5 år) og 7.8.2 (6–18 år, tabell 2 og 3),
+   Akuttveileder i pediatri 7.2, GINA 2026, Felleskatalogen (styrker og aldersgrenser).
+   ICS-dosegrenser i µg/døgn: [lav øvre grense, moderat øvre grense]. */
+const ICS_GRENSER = {
+  "6-11": { bud:[200,400], fp:[100,200], bdp:[100,200], cic:[80,160] },
+  "12+":  { bud:[400,800], fp:[250,500], bdp:[200,400], cic:[160,320], ff:[100,100] }
+};
+/* la: LABA per dose [stoff, µg]; brukes til antidopingvarsel */
+const STOFFNAVN = { bud:"budesonid", fp:"flutikasonpropionat", cic:"ciklesonid", ff:"flutikasonfuroat", bdp:"beklometason" };
+
+/* type: ics | icslaba | martics (ICS-formoterol) | ltra | saba
+   s: [visningsnavn, ICS-µg per dose, minste alder i år, merknad]
+   d: forslag per aldersgruppe: [morgen, kveld] (vedlikehold) eller behovsdose */
+const PREP = [
+  {id:"flutide_a", navn:"Flutide inhalasjonsaerosol", type:"ics", stoff:"fp", enhet:"puff", kammer:true,
+   s:[["50 µg/dose",50,1],["125 µg/dose",125,4]],
+   d:{"0-5":["50 µg/dose",1,1], "6-11":["50 µg/dose",1,1], "12+":["125 µg/dose",1,0]},
+   info:{"0-5":"Veileder 7.8.1: start med dobbel lav dose, flutikasonpropionat 100 µg/døgn. Trapp ned til 50 µg x 1 ved god kontroll."}},
+  {id:"flutide_d", navn:"Flutide Diskus", type:"ics", stoff:"fp", enhet:"inhalasjon",
+   s:[["50 µg/dose",50,4],["100 µg/dose",100,4],["250 µg/dose",250,16]],
+   d:{"6-11":["50 µg/dose",1,1], "12+":["100 µg/dose",1,1]}},
+  {id:"pulmicort", navn:"Pulmicort Turbuhaler", type:"ics", stoff:"bud", enhet:"inhalasjon",
+   s:[["100 µg/dose",100,6],["200 µg/dose",200,6],["400 µg/dose",400,6]],
+   d:{"6-11":["100 µg/dose",1,1], "12+":["200 µg/dose",1,1]}},
+  {id:"giona", navn:"Giona Easyhaler", type:"ics", stoff:"bud", enhet:"inhalasjon",
+   s:[["100 µg/dose",100,6],["200 µg/dose",200,6],["400 µg/dose",400,6]],
+   d:{"6-11":["100 µg/dose",1,1], "12+":["200 µg/dose",1,1]}},
+  {id:"alvesco", navn:"Alvesco inhalasjonsaerosol", type:"ics", stoff:"cic", enhet:"puff", kammer:true,
+   s:[["80 µg/dose",80,12],["160 µg/dose",160,12]],
+   d:{"12+":["160 µg/dose",1,0]}, fk:true,
+   info:{"12+":"Felleskatalogen: over 12 år, 160 µg x 1. Noen klarer seg med 80 µg."}},
+  {id:"seretide_a", navn:"Seretide inhalasjonsaerosol", type:"icslaba", stoff:"fp", enhet:"puff", kammer:true,
+   s:[["25/50 µg/dose",50,4],["25/125 µg/dose",125,12],["25/250 µg/dose",250,12]], la:["salmeterol",25],
+   d:{"6-11":["25/50 µg/dose",2,2], "12+":["25/125 µg/dose",2,2]}},
+  {id:"seretide_d", navn:"Seretide Diskus", type:"icslaba", stoff:"fp", enhet:"inhalasjon",
+   s:[["50/100 µg/dose",100,4],["50/250 µg/dose",250,12],["50/500 µg/dose",500,12]], la:["salmeterol",50],
+   d:{"6-11":["50/100 µg/dose",1,1], "12+":["50/250 µg/dose",1,1]}},
+  {id:"symbicort_v", navn:"Symbicort Turbuhaler (fast dosering)", type:"icslaba", stoff:"bud", enhet:"inhalasjon",
+   s:[["mite 80/4,5 µg/dose",80,6,4.5],["160/4,5 µg/dose",160,12,4.5],["forte 320/9 µg/dose",320,12,9]], fk:true, la:["formoterol",4.5],
+   d:{"6-11":["mite 80/4,5 µg/dose",2,2], "12+":["160/4,5 µg/dose",1,1]},
+   info:{"6-11":"Felleskatalogen: 6–11 år bruker Symbicort mite. Under 6 år ikke anbefalt.", "12+":"Felleskatalogen: 12–17 år 1–2 inhalasjoner x 2."}},
+  {id:"relvar", navn:"Relvar Ellipta", type:"icslaba", stoff:"ff", enhet:"inhalasjon",
+   s:[["92/22 µg/dose",92,12],["184/22 µg/dose",184,12]], la:["vilanterol",22],
+   d:{"12+":["92/22 µg/dose",1,0]}},
+  {id:"flutiform", navn:"Flutiform inhalasjonsaerosol", type:"icslaba", stoff:"fp", enhet:"puff", kammer:true,
+   s:[["50/5 µg/dose",50,12],["125/5 µg/dose",125,12],["250/10 µg/dose",250,18,10]], la:["formoterol",5],
+   d:{"0-5":["50/5 µg/dose",1,1], "6-11":["50/5 µg/dose",2,2], "12+":["50/5 µg/dose",2,2]},
+   info:{"0-5":"Gis med kammer og maske. Flutikasonpropionat 100 µg/døgn tilsvarer veilederens startdose.", "*":"Vanlig dosering 2 puff x 2 med kammer."}},
+  {id:"inuxair", navn:"Inuxair inhalasjonsaerosol", type:"icslaba", stoff:"bdp", enhet:"puff", kammer:true,
+   s:[["100/6 µg/dose",100,18],["200/6 µg/dose",200,18]], la:["formoterol",6],
+   d:{"0-5":["100/6 µg/dose",1,1], "6-11":["100/6 µg/dose",1,1], "12+":["100/6 µg/dose",1,1]},
+   info:{"*":"Ekstrafin beklometason: 100 µg tilsvarer omtrent 250 µg vanlig beklometason. Kan brukes med kammer."}},
+  {id:"singulair", navn:"Montelukast (Singulair)", type:"ltra", enhet:"tablett",
+   s:[["4 mg tyggetablett",0,2],["5 mg tyggetablett",0,6],["10 mg tablett",0,15]], fk:true,
+   d:{"0-5":["4 mg tyggetablett",0,1], "6-11":["5 mg tyggetablett",0,1], "12+":["10 mg tablett",0,1]},
+   info:{"*":"Felleskatalogen: 4 mg 2–5 år, 5 mg 6–14 år, 10 mg over 15 år, gis om kvelden. Granulat er ikke kontrollert. Mangelvarsel 5 mg (utfasing, 01.11.2026–31.01.2027). Brukes i liten grad (veileder). Følg med på søvn, mareritt og humør."}},
+];
+const MART = [
+  {id:"symbicort_m", navn:"Symbicort Turbuhaler", stoff:"bud", fk:true, s:[["mite 80/4,5 µg/dose",80,12,4.5],["160/4,5 µg/dose",160,12,4.5]], d:{"6-11":0, "12+":1}},
+  {id:"bufomix_m", navn:"Bufomix Easyhaler", stoff:"bud", s:[["80/4,5 µg/dose",80,12,4.5],["160/4,5 µg/dose",160,12,4.5]], d:{"6-11":0, "12+":1}},
+  {id:"inuxair_m", navn:"Inuxair inhalasjonsaerosol", stoff:"bdp", s:[["100/6 µg/dose",100,18,6]], d:{"6-11":0, "12+":0}},
+];
+const SABA = [
+  {id:"ventoline", navn:"Ventoline inhalasjonsaerosol", s:"0,1 mg/dose", enhet:"puff", kammer:true, d:2, min:0, salb:100},
+  {id:"airomir", navn:"Airomir inhalasjonsaerosol", s:"0,1 mg/dose", enhet:"puff", kammer:true, d:2, min:0, salb:100},
+  {id:"buventol", navn:"Buventol Easyhaler", s:"100 µg/dose", enhet:"inhalasjon", d:2, min:6, salb:100},
+  {id:"bricanyl", navn:"Bricanyl Turbuhaler", s:"0,5 mg/dose", enhet:"inhalasjon", d:1, min:6, terb:true},
+];
+const AGEMIN = {"0-5":0, "6-11":6, "12+":12};
+const AGEMAX = {"0-5":5, "6-11":11, "12+":18};
+
+const TRIGGERE = ["Forkjølelse / virus","Fysisk aktivitet","Kald luft","Husstøvmidd","Pelsdyr","Muggsopp / fukt","Røyk / vape / vedfyring","Sterk lukt / parfyme"];
+const KOPI = {"0-5":["barnehage","trener/fritid"], "6-11":["skole/SFO","trener/fritid"], "12+":["skole","trener/fritid"]};
+
+const TXT = {
+ "0-5":{tittel:"Astmaplan 0–5 år", under:"For foreldre og barnehage.",
+   gTegn:["Sover godt uten å hoste","Leker og er aktivt som vanlig","Lite eller ingen hoste og piping","Trenger sjelden behovsmedisin"],
+   yTegn:["Forkjølelse med økende hoste","Piper eller puster tyngre","Hoster om natten","Trenger behovsmedisin oftere enn vanlig"],
+   rTegn:["Puster fort og tungt, huden trekkes inn mellom ribbena","Klarer ikke å spise, drikke eller lage lyd som vanlig","Blek eller blålig rundt munnen","Slapp, sløv eller svært urolig","Behovsmedisinen hjelper ikke, eller virker kortere enn 4 timer"],
+   r1:"Hold deg rolig og ha barnet sittende oppreist på fanget.",
+   kontakt:"hvis barnet trenger behovsmedisin oftere enn hver 4. time, eller ikke er bedre etter 1–2 døgn.",
+   friskt:"hver dag, også når barnet er friskt",
+   rad:["<b>Røyk og vape:</b> Skal ikke brukes, verken inne, ute eller i bil.",
+        "!!<b>Vaksiner:</b> Influensavaksine anbefales hver høst. Pneumokokk- og koronavaksine vurderes sammen med lege.",
+        "<b>Pelsdyr:</b> Ved bekreftet allergi bør barnet unngå dyret.",
+        "<b>Pollen:</b> Ved pollenallergi kan forebyggende medisin startes noen uker før sesongen, etter avtale.",
+        "<b>Kulde:</b> Buff eller kaldluftsmaske kan hjelpe.",
+        "<b>Lek og aktivitet</b> er bra for barnet. Hoster barnet ofte ved lek, latter eller gråt? Si fra til legen.",
+        "<b>Kammer:</b> Ett puff om gangen og 5 rolige pust. Prøv når barnet er rolig, et gråtende barn får i seg lite medisin."],
+   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.1 Astma hos barn ≤ 5 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen."},
+ "6-11":{tittel:"Min astmaplan 6–11 år", under:"For barn, foreldre og skole.",
+   gTegn:["Jeg sover godt og våkner ikke av hoste","Jeg kan leke og ha gym som andre","Jeg har lite eller ingen hoste og tung pust","Jeg trenger behovsmedisin høyst 2 ganger i uken"],
+   yTegn:["Jeg hoster mer, særlig om natten","Jeg piper eller blir tung i pusten","Jeg trenger behovsmedisin oftere enn vanlig","Jeg orker mindre i gym og lek"],
+   rTegn:["Klarer ikke å snakke hele setninger","Puster fort og tungt, huden trekkes inn mellom ribbena","Blek eller blålig rundt munnen","Svært sliten, redd eller urolig","Behovsmedisinen hjelper ikke, eller virker kortere enn 4 timer"],
+   r1:"Hent en voksen. Sitt oppreist og prøv å puste rolig.",
+   kontakt:"hvis du trenger behovsmedisin oftere enn hver 4. time, eller ikke er bedre etter 1–2 døgn.",
+   friskt:"hver dag, også når jeg er frisk",
+   rad:["<b>Røyk og vape:</b> Skal ikke brukes, verken inne, ute eller i bil.",
+        "!!<b>Vaksiner:</b> Influensavaksine anbefales hver høst. Pneumokokk- og koronavaksine vurderes sammen med lege.",
+        "<b>Pelsdyr:</b> Ved bekreftet allergi bør du unngå dyret.",
+        "<b>Pollen:</b> Ved pollenallergi kan forebyggende medisin startes noen uker før sesongen, etter avtale.",
+        "<b>Trening er bra!</b> Bruk buff eller kaldluftsmaske i kulde. Får du astma: stopp, ta behovsmedisin og fortsett når det har gått over.",
+        "<b>Kammer:</b> Ett puff om gangen og 5 rolige pust. Skyll munnen etter inhalasjonssteroid."],
+   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.2 Astma bronkiale 6–18 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen."},
+ "12+":{tittel:"Min astmaplan 12+ år", under:"For ungdom.",
+   gTegn:["Lite eller ingen plager på dagtid","Jeg våkner ikke av astma","Jeg kan trene som jeg vil","Jeg trenger ekstra medisin høyst 2 ganger i uken"],
+   yTegn:["Jeg hoster, piper eller kjenner tetthet i brystet","Jeg våkner om natten av astma","Jeg trenger oftere ekstra medisin","Jeg orker mindre trening"],
+   rTegn:["Klarer ikke å snakke hele setninger","Puster fort og tungt","Blek eller blålig rundt munnen","Svært sliten, redd eller forvirret","Medisinen hjelper ikke, eller virker bare kort tid"],
+   r1:"Si fra til noen rundt deg. Sitt oppreist og pust rolig.",
+   kontakt:"hvis du trenger mer enn 8 inhalasjoner per døgn (MART), behovsmedisin oftere enn hver 4. time, eller ikke er bedre etter 1–2 døgn.",
+   friskt:"hver dag, også når jeg er frisk",
+   rad:["<b>Røyk og vape:</b> Skal ikke brukes. Det gir dårligere astma og svakere medisineffekt.",
+        "!!<b>Vaksiner:</b> Influensavaksine anbefales hver høst. Pneumokokk- og koronavaksine vurderes sammen med lege.",
+        "<b>Pelsdyr:</b> Ved bekreftet allergi bør du unngå dyret.",
+        "<b>Pollen:</b> Ved pollenallergi kan forebyggende medisin startes noen uker før sesongen.",
+        "<b>Trening er bra!</b> Buff i kulde. Konkurrerer du? Se antidoping.no.",
+        "<b>Pulverinhalator:</b> Pust ut, så raskt og dypt inn. Hold pusten 5–10 sek. Skyll munnen. Ha alltid med deg medisinen."],
+   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.2 Astma bronkiale 6–18 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen."}
+};
+/* QR-kode og lenke til film om inhalasjonsteknikk (samme som i PDF-ene) */
+const INHAL_URL = "https://www.helsenorge.no/sykdom/lunger-og-luftveier/astma/";
+const INHAL_TXT = "helsenorge.no/sykdom/lunger-og-luftveier/astma";
+const QR_SVG = `<svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" shape-rendering="crispEdges" role="img" aria-label="QR-kode til film om inhalasjonsteknikk"><rect width="37" height="37" fill="#fff"/><path fill="#003283" d="M2 2h7v1h-7zM10 2h2v1h-2zM14 2h1v1h-1zM18 2h6v1h-6zM25 2h1v1h-1zM28 2h7v1h-7zM2 3h1v1h-1zM8 3h1v1h-1zM10 3h2v1h-2zM13 3h1v1h-1zM16 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM24 3h2v1h-2zM28 3h1v1h-1zM34 3h1v1h-1zM2 4h1v1h-1zM4 4h3v1h-3zM8 4h1v1h-1zM11 4h1v1h-1zM14 4h5v1h-5zM20 4h1v1h-1zM22 4h1v1h-1zM28 4h1v1h-1zM30 4h3v1h-3zM34 4h1v1h-1zM2 5h1v1h-1zM4 5h3v1h-3zM8 5h1v1h-1zM10 5h1v1h-1zM13 5h2v1h-2zM19 5h1v1h-1zM24 5h2v1h-2zM28 5h1v1h-1zM30 5h3v1h-3zM34 5h1v1h-1zM2 6h1v1h-1zM4 6h3v1h-3zM8 6h1v1h-1zM11 6h2v1h-2zM14 6h1v1h-1zM18 6h2v1h-2zM21 6h2v1h-2zM26 6h1v1h-1zM28 6h1v1h-1zM30 6h3v1h-3zM34 6h1v1h-1zM2 7h1v1h-1zM8 7h1v1h-1zM11 7h2v1h-2zM14 7h5v1h-5zM20 7h2v1h-2zM28 7h1v1h-1zM34 7h1v1h-1zM2 8h7v1h-7zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM24 8h1v1h-1zM26 8h1v1h-1zM28 8h7v1h-7zM10 9h1v1h-1zM14 9h1v1h-1zM16 9h7v1h-7zM24 9h3v1h-3zM2 10h1v1h-1zM4 10h2v1h-2zM7 10h3v1h-3zM11 10h1v1h-1zM13 10h1v1h-1zM16 10h4v1h-4zM21 10h1v1h-1zM23 10h1v1h-1zM25 10h1v1h-1zM28 10h1v1h-1zM31 10h1v1h-1zM33 10h2v1h-2zM9 11h7v1h-7zM18 11h1v1h-1zM20 11h4v1h-4zM25 11h1v1h-1zM28 11h2v1h-2zM31 11h2v1h-2zM34 11h1v1h-1zM2 12h3v1h-3zM6 12h3v1h-3zM12 12h1v1h-1zM15 12h1v1h-1zM18 12h2v1h-2zM22 12h4v1h-4zM28 12h4v1h-4zM33 12h2v1h-2zM2 13h1v1h-1zM5 13h3v1h-3zM9 13h6v1h-6zM18 13h1v1h-1zM20 13h1v1h-1zM24 13h6v1h-6zM31 13h1v1h-1zM34 13h1v1h-1zM7 14h2v1h-2zM10 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM16 14h1v1h-1zM19 14h1v1h-1zM22 14h1v1h-1zM24 14h3v1h-3zM30 14h2v1h-2zM33 14h2v1h-2zM2 15h3v1h-3zM7 15h1v1h-1zM10 15h1v1h-1zM12 15h2v1h-2zM16 15h1v1h-1zM20 15h2v1h-2zM23 15h2v1h-2zM26 15h1v1h-1zM29 15h1v1h-1zM32 15h2v1h-2zM2 16h1v1h-1zM6 16h5v1h-5zM12 16h4v1h-4zM19 16h4v1h-4zM26 16h1v1h-1zM28 16h3v1h-3zM2 17h1v1h-1zM5 17h2v1h-2zM11 17h1v1h-1zM13 17h2v1h-2zM18 17h1v1h-1zM20 17h1v1h-1zM22 17h2v1h-2zM27 17h2v1h-2zM31 17h2v1h-2zM3 18h1v1h-1zM5 18h1v1h-1zM8 18h4v1h-4zM13 18h2v1h-2zM17 18h2v1h-2zM20 18h1v1h-1zM23 18h2v1h-2zM27 18h2v1h-2zM30 18h1v1h-1zM32 18h1v1h-1zM3 19h2v1h-2zM6 19h1v1h-1zM9 19h3v1h-3zM13 19h1v1h-1zM15 19h1v1h-1zM17 19h1v1h-1zM22 19h1v1h-1zM25 19h1v1h-1zM28 19h1v1h-1zM30 19h2v1h-2zM33 19h2v1h-2zM2 20h1v1h-1zM4 20h3v1h-3zM8 20h2v1h-2zM14 20h2v1h-2zM17 20h4v1h-4zM22 20h3v1h-3zM27 20h4v1h-4zM32 20h1v1h-1zM3 21h2v1h-2zM7 21h1v1h-1zM10 21h2v1h-2zM14 21h1v1h-1zM16 21h2v1h-2zM19 21h3v1h-3zM26 21h3v1h-3zM30 21h1v1h-1zM33 21h2v1h-2zM3 22h1v1h-1zM5 22h4v1h-4zM10 22h2v1h-2zM13 22h2v1h-2zM18 22h3v1h-3zM23 22h1v1h-1zM31 22h2v1h-2zM34 22h1v1h-1zM2 23h1v1h-1zM4 23h1v1h-1zM6 23h1v1h-1zM10 23h3v1h-3zM14 23h2v1h-2zM19 23h1v1h-1zM21 23h6v1h-6zM28 23h1v1h-1zM31 23h2v1h-2zM34 23h1v1h-1zM4 24h3v1h-3zM8 24h1v1h-1zM10 24h1v1h-1zM13 24h3v1h-3zM18 24h1v1h-1zM20 24h1v1h-1zM23 24h1v1h-1zM25 24h6v1h-6zM33 24h2v1h-2zM3 25h2v1h-2zM6 25h2v1h-2zM10 25h2v1h-2zM15 25h1v1h-1zM18 25h1v1h-1zM21 25h1v1h-1zM25 25h2v1h-2zM28 25h4v1h-4zM34 25h1v1h-1zM2 26h1v1h-1zM4 26h2v1h-2zM8 26h4v1h-4zM13 26h1v1h-1zM17 26h3v1h-3zM21 26h1v1h-1zM24 26h1v1h-1zM26 26h5v1h-5zM34 26h1v1h-1zM10 27h5v1h-5zM17 27h3v1h-3zM21 27h1v1h-1zM26 27h1v1h-1zM30 27h2v1h-2zM2 28h7v1h-7zM10 28h1v1h-1zM12 28h1v1h-1zM15 28h1v1h-1zM20 28h2v1h-2zM23 28h1v1h-1zM25 28h2v1h-2zM28 28h1v1h-1zM30 28h1v1h-1zM2 29h1v1h-1zM8 29h1v1h-1zM10 29h3v1h-3zM14 29h1v1h-1zM16 29h1v1h-1zM18 29h1v1h-1zM20 29h4v1h-4zM25 29h2v1h-2zM30 29h5v1h-5zM2 30h1v1h-1zM4 30h3v1h-3zM8 30h1v1h-1zM11 30h1v1h-1zM13 30h1v1h-1zM16 30h2v1h-2zM20 30h11v1h-11zM32 30h2v1h-2zM2 31h1v1h-1zM4 31h3v1h-3zM8 31h1v1h-1zM10 31h3v1h-3zM15 31h1v1h-1zM17 31h1v1h-1zM19 31h1v1h-1zM22 31h1v1h-1zM24 31h3v1h-3zM29 31h1v1h-1zM31 31h2v1h-2zM34 31h1v1h-1zM2 32h1v1h-1zM4 32h3v1h-3zM8 32h1v1h-1zM10 32h1v1h-1zM12 32h8v1h-8zM22 32h8v1h-8zM2 33h1v1h-1zM8 33h1v1h-1zM11 33h1v1h-1zM14 33h1v1h-1zM18 33h3v1h-3zM24 33h4v1h-4zM29 33h2v1h-2zM34 33h1v1h-1zM2 34h7v1h-7zM10 34h1v1h-1zM14 34h2v1h-2zM17 34h3v1h-3zM21 34h1v1h-1zM23 34h1v1h-1zM25 34h1v1h-1zM28 34h1v1h-1zM30 34h1v1h-1zM32 34h1v1h-1z"/></svg>`;
+const FORFATTER = "Alexander Aalberg, overlege, spesialist i barnesykdommer";
+const MED_TA = "Ta med planen, faste medisiner og kammer til kontroll, fastlege, legevakt og sykehus.";
+
+/* ===================== HJELPERE ===================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : null; };
+const fmt = n => String(Math.round(n * 10) / 10).replace(".", ",");
+const age = () => document.querySelector('input[name=age]:checked').value;
+const opplegg = () => age() === "0-5" ? "to" : document.querySelector('input[name=opplegg]:checked').value;
+let uid = 0;
+
+function prepsFor(a){ return PREP; }
+function vanlig(p, a){ return !!p.d[a] && p.s.some(s => s[2] <= AGEMAX[a]); }
+/* Faktisk alder i år fra fødselsdato (dd.mm.åååå), ellers nedre grense for aldersgruppen */
+function alderAar(){
+  const m = v("fdato").match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+  if (m){ const f = new Date(+m[3], +m[2]-1, +m[1]); const y = (Date.now() - f) / 31557600000; if (y >= 0 && y < 25) return y; }
+  return AGEMIN[age()];
+}
+function strengthsFor(p, a){ return p.s; }
+function sabaFor(a){ return SABA; }
+
+/* ---------- vedlikeholdsrader ---------- */
+function addVedl(pref){
+  const a = age(), id = "v" + (++uid);
+  const el = document.createElement("div"); el.className = "med"; el.dataset.row = id;
+  const o = p => `<option value="${p.id}">${esc(p.navn)}</option>`;
+  const opts = PREP.filter(p => vanlig(p, a)).map(o).join("") + `<optgroup label="Andre (utenfor vanlig bruk i aldersgruppen)">${PREP.filter(p => !vanlig(p, a)).map(o).join("")}</optgroup>`;
+  el.innerHTML = `
+    <div class="row"><label>Preparat<select id="${id}p"><option value="">Velg preparat</option>${opts}<option value="_annet">Annet (skriv selv)</option></select></label>
+    <label>Styrke<select id="${id}s"></select></label></div>
+    <label id="${id}aL" hidden>Preparat og styrke<input id="${id}a"></label>
+    <div class="row n"><label>Morgen<input id="${id}m" inputmode="numeric"></label><label>Kveld<input id="${id}k" inputmode="numeric"></label>
+    <label>Enhet<input id="${id}e" value="puff"></label></div>
+    <div class="hint" id="${id}h"></div>
+    <div class="btns"><button type="button" class="ghost" data-del="${id}">Fjern</button></div>`;
+  $("vedl").appendChild(el);
+  const ps = $(id+"p");
+  ps.addEventListener("change", () => { fillStrength(id, true); update(); });
+  $(id+"s").addEventListener("change", () => { fillDose(id); update(); });
+  el.querySelector("[data-del]").addEventListener("click", () => { el.remove(); update(); });
+  if (pref){ ps.value = pref; fillStrength(id, true); }
+  return id;
+}
+function fillStrength(id, withDose){
+  const a = age(), p = PREP.find(x => x.id === $(id+"p").value);
+  const ss = $(id+"s"); $(id+"aL").hidden = $(id+"p").value !== "_annet";
+  if (!p){ ss.innerHTML = ""; return; }
+  ss.innerHTML = strengthsFor(p, a).map(s => `<option>${esc(s[0])}</option>`).join("");
+  $(id+"e").value = p.enhet;
+  const d = p.d[a];
+  if (d) ss.value = d[0];
+  if (withDose) fillDose(id);
+}
+function fillDose(id){
+  const a = age(), p = PREP.find(x => x.id === $(id+"p").value); if (!p) return;
+  const d = p.d[a];
+  if (d && $(id+"s").value === d[0]){ $(id+"m").value = d[1] || ""; $(id+"k").value = d[2] || ""; }
+}
+function vedlRows(){
+  const a = age();
+  return [...$("vedl").querySelectorAll(".med")].map(el => {
+    const id = el.dataset.row, pid = $(id+"p").value, p = PREP.find(x => x.id === pid);
+    const navn = pid === "_annet" ? $(id+"a").value.trim() : (p ? p.navn + " " + $(id+"s").value : "");
+    return { id, p, navn, m:num($(id+"m").value), k:num($(id+"k").value), enhet:$(id+"e").value.trim() || "puff", styrke:$(id+"s").value };
+  }).filter(r => r.navn);
+}
+function icsInfo(r, a){
+  if (!r.p || !r.p.stoff) return null;
+  const s = r.p.s.find(x => x[0] === r.styrke); if (!s || !s[1]) return null;
+  const tot = s[1] * ((r.m || 0) + (r.k || 0)); if (!tot) return null;
+  let kat = "";
+  if (a === "0-5"){ kat = tot <= 50 ? "lav dose" : tot <= 100 ? "dobbel lav dose (veilederens startdose)" : "over startdose, konferer erfaren lege"; }
+  else { const g = (ICS_GRENSER[a] || {})[r.p.stoff]; if (g) kat = tot <= g[0] ? "lav dose" : tot <= g[1] ? "moderat dose" : "høy dose"; }
+  return { tot, kat, stoff: STOFFNAVN[r.p.stoff] };
+}
+
+/* ---------- behovsrader ---------- */
+function setupBehov(){
+  const a = age(), mart = opplegg() === "mart";
+  const box = $("behov"); box.innerHTML = "";
+  if (mart){
+    const opts = MART.flatMap(m => m.s.map((s,i) => `<option value="${m.id}|${i}">${esc(m.navn)} ${esc(s[0])}</option>`)).join("");
+    box.innerHTML = `<div class="med"><label>MART-inhalator (brukes til både 1 og 2)<select id="martP">${opts}</select></label>
+      <div class="row n"><label>Fast morgen<input id="martM" inputmode="numeric" value="1"></label><label>Fast kveld<input id="martK" inputmode="numeric" value="${a==='12+'?1:0}"></label><label>Ved behov<input id="martB" value="1 inhalasjon"></label></div>
+      <div class="hint" id="martIcs"></div></div>`;
+    const def = MART[0]; $("martP").value = def.id + "|" + (def.d[a] ?? 0);
+    ["martP","martM","martK","martB"].forEach(i => $(i).addEventListener("input", update));
+    $("martMaks").value = 8;
+  } else {
+    const opts = sabaFor(a).map(s => `<option value="${s.id}">${esc(s.navn)} ${esc(s.s)}</option>`).join("");
+    box.innerHTML = `<div class="med"><label>Behovsmedisin<select id="sabaP">${opts}<option value="_annet">Annet (skriv selv)</option></select></label>
+      <label id="sabaAL" hidden>Preparat og styrke<input id="sabaA"></label>
+      <div class="row n"><label>Dose<input id="sabaD" inputmode="numeric" value="2"></label><label>Enhet<input id="sabaE" value="puff"></label><label>Inntil hver (t)<input id="sabaT" inputmode="numeric" value="4"></label></div>
+      <div class="hint">Veileder: salbutamol vanligvis 0,2 mg ved behov (2 puff à 0,1 mg). Ved akutt astma ofte 0,4–1,0 mg.</div></div>`;
+    $("sabaP").addEventListener("change", () => { const s = SABA.find(x => x.id === $("sabaP").value); $("sabaAL").hidden = $("sabaP").value !== "_annet"; if (s){ $("sabaD").value = s.d; $("sabaE").value = s.enhet; } update(); });
+    ["sabaA","sabaD","sabaE","sabaT"].forEach(i => $(i).addEventListener("input", update));
+  }
+  $("martBox").hidden = !mart;
+}
+function behovInfo(){
+  const a = age();
+  if (opplegg() === "mart"){
+    const [mid, si] = $("martP").value.split("|"); const m = MART.find(x => x.id === mid), s = m.s[+si];
+    return { mart:true, p:m, s, navn: m.navn + " " + s[0], ics: s[1], form: s[3], m:num($("martM").value)||0, k:num($("martK").value)||0, b:$("martB").value.trim() };
+  }
+  const s = SABA.find(x => x.id === $("sabaP").value);
+  const navn = $("sabaP").value === "_annet" ? $("sabaA").value.trim() : (s ? s.navn + " " + s.s : "");
+  return { mart:false, p:s, navn, d:$("sabaD").value.trim(), e:$("sabaE").value.trim() || "puff", t:$("sabaT").value.trim() };
+}
+
+/* ---------- aldersbytte ---------- */
+function onAge(){
+  const a = age();
+  $("oppleggBox").hidden = a === "0-5";
+  if (a === "0-5"){ $("oppTo").checked = true; }
+  $("fenoL").hidden = a === "0-5";
+  $("trenRow").hidden = a === "0-5";
+  $("kammerBox").hidden = false;
+  $("trigBox").innerHTML = TRIGGERE.map((t,i) => `<label class="chk"><input type="checkbox" id="tr${i}"> ${esc(t)}</label>`).join("");
+  $("kopiBox").innerHTML = KOPI[a].map((t,i) => `<label class="chk"><input type="checkbox" id="ko${i}"> Kopi til ${esc(t)}</label>`).join("");
+  document.querySelectorAll("#trigBox input,#kopiBox input").forEach(i => i.addEventListener("change", update));
+  $("vedl").innerHTML = ""; addVedl();
+  setupBehov(); update();
+}
+
+/* ===================== FORHÅNDSVISNING ===================== */
+function v(id){ return $(id) ? $(id).value.trim() : ""; }
+function fill(x, w){ return x ? `<span class="fill">${esc(x)}</span>` : `<span class="fill" style="min-width:${w||8}mm">&nbsp;</span>`; }
+function cb(on){ return `<span class="box">${on ? "✓" : ""}</span>`; }
+function renderPlan(){
+  const a = age(), T = TXT[a], mart = opplegg() === "mart";
+  const rows = vedlRows(), b = behovInfo();
+  const maxRows = 3;
+  // Vedlikehold
+  let vRows = [];
+  if (mart) vRows.push({navn:b.navn + " (MART)", m:b.m, k:b.k, enhet:"inhalasjon"});
+  rows.forEach(r => vRows.push(r));
+  while (vRows.length < Math.max(2, Math.min(maxRows, vRows.length))) vRows.push({});
+  const vHtml = vRows.map(r => `<tr><td>${esc(r.navn||"")}&nbsp;</td><td class="n">${r.m!=null&&r.navn?esc(fmt(r.m))+" "+esc(r.enhet):""}</td><td class="n">${r.k!=null&&r.navn?esc(fmt(r.k))+" "+esc(r.enhet):""}</td></tr>`).join("");
+  // Behov
+  const bHtml = mart
+    ? `<tr><td>${esc(b.navn)} (samme inhalator)</td><td class="n">${esc(b.b||"1 inhalasjon")}</td><td class="n">maks ${esc(v("martMaks")||"8")} per døgn totalt</td></tr>`
+    : `<tr><td>${esc(b.navn)}&nbsp;</td><td class="n">${b.d?esc(b.d)+" "+esc(b.e):""}</td><td class="n">${b.t?"inntil hver "+esc(b.t)+". time":""}</td></tr>`;
+  const kammer = [];
+  if ($("kMaske").checked) kammer.push("med maske"); if ($("kMunn").checked) kammer.push("med munnstykke");
+  const enhet = mart ? "inhalasjoner" : (b.e || "puff");
+  const gPuff = v("gPuff"), gT = v("gTimer"), gD = v("gDogn");
+  const yHtml = mart
+    ? `<div>Ta 1 ekstra inhalasjon ved symptomer, maks ${fill(v("martMaks")||"8")} per døgn totalt.</div>`
+    : `<div>Ta behovsmedisin: ${fill(gPuff)} ${esc(enhet)} inntil hver ${fill(gT)} time.</div>`;
+  const predOn = $("pred").checked;
+  const rMed = mart ? b.navn : b.navn;
+  const trig = TRIGGERE.map((t,i) => `<div>${cb($("tr"+i)?.checked)}${esc(t)}</div>`).join("")
+    + `<div>${cb(!!v("tPollen"))}Pollen: ${esc(v("tPollen"))}</div><div>${cb(!!v("tAnnet"))}Annet: ${esc(v("tAnnet"))}</div>`;
+  const rad = T.rad.map(r => r.startsWith("!!") ? `<li class="hl">${r.slice(2)}</li>` : `<li>${r}</li>`).join("")
+    + (a !== "0-5" ? `<li>${cb(!!v("trPuff"))}Før trening: ${fill(v("trPuff"))} puff ${esc(v("trMed"))}</li>` : "");
+  const kopi = KOPI[a].map((t,i) => `<span>${cb($("ko"+i)?.checked)}${esc(t)}</span>`).join("");
+  const mal = [["Siste målinger, dato", v("mdato")], ["FEV1 (% av forventet)", v("fev1")], ["AKT", v("akt")]];
+  if (a !== "0-5") mal.push(["FeNO (ppb)", v("feno")]);
+  mal.push(["Eosinofile (×10⁹/L)", v("eos")]);
+  const g = (l, x) => l ? `<div><small>${esc(l)}</small><span>${esc(x)}</span></div>` : `<div></div>`;
+
+  $("plan").innerHTML = `
+  <div class="p-band"><span>Lunge- og allergipoliklinikken · Barne- og ungdomsklinikken · St. Olavs hospital</span><span>${esc(T.tittel.replace("Min ",""))}</span></div>
+  <div class="p-head"><h2>${esc(T.tittel)}</h2><p>${esc(T.under)} <b>${esc(MED_TA)}</b></p></div>
+  <div class="p-grid">
+    ${g(a==="0-5"?"Barnets navn":"Navn", v("navn"))}${g("Fødselsdato", v("fdato"))}${g("Vekt (kg)", v("vekt"))}${g("Dato for plan", v("dato"))}
+    ${g("Forordnende barnelege", v("lege"))}${g("Sykepleier", v("spl"))}${g("Tlf. poliklinikken", v("tlf"))}${g("Neste kontroll", v("kontroll"))}
+  </div>
+  <div class="p-grid${mal.length === 5 ? " m5" : ""}">${mal.map(m => g(m[0], m[1])).join("")}</div>
+  <div class="zone z-g"><div class="zl">GRØNN<small>${a==="0-5"?"Har det bra":"Jeg har det bra"}</small></div>
+    <div class="zt"><h4>Tegn</h4><ul>${T.gTegn.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>
+    <div class="zd"><h4>Gjør dette</h4>
+      ${mart?`<div><b>MART</b> (Maintenance and Reliever Therapy: vedlikeholds- og behovsbehandling med én inhalator til både 1 og 2)</div>`:""}
+      <div class="step"><i>1</i>VEDLIKEHOLD <em>${esc(T.friskt)}</em></div>
+      <table class="mt"><tr><th>Medisin og styrke</th><th>Morgen</th><th>Kveld</th></tr>${vHtml}</table>
+      <div class="step"><i>2</i>BEHOV <em>${a==="12+"?"ved symptomer, og før trening ved behov":"bare ved hoste, piping eller tung pust"}</em></div>
+      <table class="mt"><tr><th>Medisin og styrke</th><th>Dose</th><th>Hvor ofte</th></tr>${bHtml}</table>
+      ${kammer.length?`<div>Kammer ${esc(kammer.join(" / "))}.${a==="0-5"?" Etter inhalasjonssteroid: vask ansiktet og skyll munnen, eller gi litt å drikke.":""}</div>`:""}
+    </div></div>
+  <div class="zone z-y"><div class="zl">GUL<small>Blir verre</small></div>
+    <div class="zt"><h4>Tegn</h4><ul>${T.yTegn.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>
+    <div class="zd"><h4>Gjør dette</h4>
+      <div class="step"><i>3</i>OPPTRAPPING MED BEHOVSMEDISIN</div>
+      ${yHtml}
+      <div><b>Fortsett vedlikeholdsmedisinen (1) som vanlig</b>, med samme dose.</div>
+      <div>Gjør dette i inntil ${fill(gD)} døgn. Når det går bedre: tilbake til grønn sone.</div>
+      <div><b>Kontakt lege samme dag</b> ${esc(T.kontakt)}</div>
+    </div></div>
+  <div class="zone z-r"><div class="zl">RØD<small>Akutt anfall</small></div>
+    <div class="zt"><h4>Tegn</h4><ul>${T.rTegn.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>
+    <div class="zd"><h4>Gjør dette</h4>
+      <ol class="ol">
+        <li>${esc(T.r1)}</li>
+        <li>${mart?"Ta":"Gi"} ${fill(v("rPuff"))} ${esc(enhet)} ${esc(rMed||"behovsmedisin")}${kammer.length&&!mart?" med kammer, ett om gangen":""}.</li>
+        <li>Gjenta hvert ${fill(v("rMin"))}. minutt den første timen ved behov.</li>
+        <li>${cb(predOn)}Prednisolon etter avtale: ${predOn?fill(v("predMg"))+" mg x 1 i "+fill(v("predD"))+" dager ("+esc(v("predTab"))+" tabletter)":fill("")+" mg x 1 i "+fill("")+" dager"}</li>
+        <li>Ring legevakt 116 117 hvis det ikke er klart bedre etter første dose.</li>
+      </ol>
+      <div><span class="red113">RING 113 straks</span> ved blålig eller grå farge, sløvhet, utmattelse eller rask forverring. Fortsett med behovsmedisin mens du venter.</div>
+    </div></div>
+  <div class="p-bottom">
+    <div><h4>Mine triggere</h4><div class="tg">${trig}</div><div style="margin-top:1mm">Bekreftet allergi: <b>${esc(v("allergi"))}</b></div>
+      <div class="p-qr">${QR_SVG}<div><b>Se film om god inhalasjonsteknikk</b><small>Skann koden, eller gå til ${esc(INHAL_TXT)}</small></div></div></div>
+    <div><h4>Gode råd</h4><ul class="rad">${rad}</ul></div>
+  </div>
+  <div class="p-copy"><b>Kopi til:</b>${kopi}<span><b>Fastlege, navn og tlf.:</b> ${esc(v("fastlege"))}</span></div>
+  <div class="p-foot"><span>Kilder: ${esc(T.kilde)}<br>Mer informasjon: helsenorge.no (astma hos barn) · naaf.no · Pollenvarsel: naaf.no/pollenvarsel</span><span class="by">Utarbeidet av ${esc(FORFATTER)}</span></div>`;
+}
+
+/* ===================== HINT OG JOURNALTEKST ===================== */
+function hints(){
+  const a = age();
+  vedlRows().forEach(r => {
+    const h = $(r.id+"h"); if (!h) return;
+    const msgs = []; let cls = "hint";
+    const ii = icsInfo(r, a);
+    if (ii){ msgs.push(`Døgndose ${ii.stoff}: ${fmt(ii.tot)} µg = ${ii.kat} for ${a==="0-5"?"0–5 år":a==="6-11"?"6–11 år":"12–18 år"}.`); if (/høy|konferer/.test(ii.kat)) cls = "hint warn"; else cls = "hint ok"; }
+    if (r.p){ const s = r.p.s.find(x => x[0] === r.styrke); if (s && s[2] > alderAar()) { msgs.push(`Off label: denne styrken er godkjent fra ${fmt(s[2])} år${r.p.fk ? "" : " (ikke kontrollert mot Felleskatalogen)"}.`); cls = "hint warn"; } }
+    if (r.p && r.p.info) msgs.push(r.p.info[a] || r.p.info["*"] || "");
+    if (r.p && r.p.type === "icslaba") msgs.push("LABA skal aldri gis uten ICS.");
+    if (r.p && !r.p.fk) msgs.push("Styrker og aldersgrenser er ikke kontrollert mot Felleskatalogen ennå.");
+    h.className = cls; h.textContent = msgs.filter(Boolean).join(" ");
+  });
+  $("oppHint").textContent = opplegg() === "mart"
+    ? (a === "6-11" ? "MART 6–11 år: budesonid/formoterol 80/4,5. Trinn 3: 1 x 1 + ved behov, trinn 4: 1 x 2 + ved behov. Maks 8 per døgn. GINA og veileder 7.8.2 anbefaler, men Felleskatalogen sier at MART under 12 år ikke anbefales (utenfor godkjent bruk)."
+                    : "MART 12–18 år: budesonid/formoterol 160/4,5. Trinn 3: 1 x 1–2 + ved behov, trinn 4–5: 2 x 2 + ved behov. Felleskatalogen: maks 6 per gang, vanligvis ikke over 8 per døgn, inntil 12 i en kort periode. Over 8: kontakt lege.")
+    : "";
+  if (opplegg() === "mart"){
+    const b = behovInfo(), tot = b.ics * (b.m + b.k);
+    $("martIcs").textContent = tot ? `Fast døgndose budesonid: ${fmt(tot)} µg, pluss behovsdoser.` : "";
+    const mx = num(v("martMaks"));
+    $("martHint").className = mx && mx > (a === "6-11" ? 8 : 12) ? "hint warn" : "hint";
+    $("martHint").textContent = a === "6-11" ? "Veileder: maks 8 inhalasjoner per døgn for 6–11 år." : "Veileder: maks 12 per døgn i en kort periode. Over 8 per døgn: kontakt lege.";
+  }
+  $("gHint").textContent = "Veileder: ved forverring ofte 0,4–1,0 mg salbutamol (4–10 puff à 0,1 mg). Kontakt lege hvis behov oftere enn hver 4. time (akuttveileder).";
+  const w = num(v("vekt"));
+  if (w){ const lo = Math.min(40, Math.round(w / 5) * 5 || 5), hi = Math.min(40, Math.round(w * 2 / 5) * 5);
+    $("predHint").textContent = `Vekt ${fmt(w)} kg: 1–2 mg/kg gir ${lo}–${hi} mg x 1 (avrundet til nærmeste 5 mg, maks 40 mg). Vanlig varighet 3–5 dager.`;
+  } else $("predHint").textContent = "Fyll inn vekt for doseforslag (1–2 mg/kg x 1, maks 40 mg, 3–5 dager).";
+  const mg = num(v("predMg")); $("predRow").hidden = !$("pred").checked;
+  if ($("pred").checked && mg && w && (mg > 40 || mg > 2 * w + 2.5)){ $("predHint").className = "hint warn"; $("predHint").textContent += " Valgt dose er over 2 mg/kg eller 40 mg."; }
+  else $("predHint").className = "hint";
+}
+/* ---------- off label og antidoping ---------- */
+let olSig = "";
+function offLabel(){
+  const a = age(), y = alderAar(), out = [];
+  const ikkeK = p => p && p.fk ? "" : " (ikke kontrollert mot Felleskatalogen)";
+  vedlRows().forEach(r => { if (!r.p) return; const s = r.p.s.find(x => x[0] === r.styrke);
+    if (s && s[2] > y) out.push(`${r.p.navn} ${s[0]}: godkjent fra ${fmt(s[2])} år${ikkeK(r.p)}.`); });
+  const b = behovInfo();
+  if (b.mart && b.s[2] > y) out.push(`MART med ${b.navn}: godkjent fra ${fmt(b.s[2])} år${ikkeK(b.p)}.`);
+  if (!b.mart && b.p && b.p.min > y) out.push(`${b.navn}: godkjent fra ${fmt(b.p.min)} år (ikke kontrollert mot Felleskatalogen).`);
+  return out;
+}
+function doping(){
+  if (age() !== "12+") return [];
+  const out = [], la = {formoterol:0, salmeterol:0, vilanterol:0};
+  const GR = {formoterol:54, salmeterol:200, vilanterol:25};
+  vedlRows().forEach(r => { if (!r.p || !r.p.la) return; const s = r.p.s.find(x => x[0] === r.styrke);
+    la[r.p.la[0]] += ((s && s[3]) || r.p.la[1]) * ((r.m || 0) + (r.k || 0)); });
+  const b = behovInfo();
+  if (b.mart){ const mx = num(v("martMaks")) || 8; la.formoterol += b.form * mx; }
+  for (const [k, g] of Object.entries(GR)) if (la[k] > g) out.push(`${k[0].toUpperCase() + k.slice(1)}: ${fmt(la[k])} µg per døgn${b.mart && k === "formoterol" ? " ved maks MART-bruk" : ""}. Grensen er ${g} µg per døgn.`);
+  if (!b.mart && b.p && b.p.terb) out.push("Terbutalin (Bricanyl) er forbudt i idrett og krever fritak. Vurder salbutamol.");
+  if (!b.mart && b.p && b.p.salb){
+    const gp = num(v("gPuff")), gt = num(v("gTimer")) || 4;
+    if (gp){ const per8 = gp * b.p.salb * Math.max(1, Math.ceil(8 / gt)); if (per8 > 600) out.push(`Gul sone gir inntil ${fmt(per8)} µg salbutamol per 8 timer. Grensen er 600 µg per 8 timer og 1600 µg per døgn.`); }
+    const rp = num(v("rPuff")); if (rp && rp * b.p.salb > 600 / 3) out.push("Rød sone (akutt anfall) overskrider grensen for salbutamol. Søk fritak i etterkant ved behov.");
+  }
+  if ($("pred").checked) out.push("Prednisolon tabletter er forbudt i konkurranse og krever fritak.");
+  return out;
+}
+function varsler(){
+  const ol = offLabel(), sig = ol.join("|");
+  if (sig !== olSig){ $("olOk").checked = false; olSig = sig; }
+  $("olBox").hidden = !ol.length; $("olList").innerHTML = ol.map(x => `<li>${esc(x)}</li>`).join("");
+  $("olBox").classList.toggle("done", $("olOk").checked);
+  const d = doping();
+  $("dopBox").hidden = !d.length; $("dopList").innerHTML = d.map(x => `<li>${esc(x)}</li>`).join("");
+  $("dopBox").classList.toggle("done", $("dopOk").checked);
+  return { ol, d };
+}
+function journal(){
+  const a = age(), mart = opplegg() === "mart", b = behovInfo();
+  const L = [];
+  L.push(`Skriftlig astmaplan (${a==="0-5"?"0–5 år":a==="6-11"?"6–11 år":"12+ år"}) utlevert ${v("dato")}.`.replace(" .", "."));
+  if (v("vekt")) L.push(`Vekt: ${v("vekt")} kg.`);
+  const m = [v("mdato")&&`dato ${v("mdato")}`, v("fev1")&&`FEV1 ${v("fev1")} % av forv.`, v("akt")&&`AKT ${v("akt")}`, a!=="0-5"&&v("feno")&&`FeNO ${v("feno")} ppb`, v("eos")&&`eosinofile ${v("eos")} ×10⁹/L`].filter(Boolean);
+  if (m.length) L.push("Siste målinger: " + m.join(", ") + ".");
+  if (mart) L.push(`Opplegg: MART med ${b.navn}, fast ${fmt(b.m)} + ${fmt(b.k)} inhalasjoner, ${b.b} ved behov, maks ${v("martMaks")||8} per døgn.`);
+  vedlRows().forEach(r => L.push(`Vedlikehold: ${r.navn}, ${r.m!=null?fmt(r.m):0} ${r.enhet} morgen og ${r.k!=null?fmt(r.k):0} ${r.enhet} kveld.`));
+  if (!mart && b.navn) L.push(`Behov: ${b.navn}, ${b.d} ${b.e} inntil hver ${b.t}. time.`);
+  if (!mart && v("gPuff")) L.push(`Forverring (gul sone): ${v("gPuff")} ${b.e} inntil hver ${v("gTimer")}. time i inntil ${v("gDogn")} døgn, vedlikehold uendret.`);
+  if (mart) L.push(`Forverring (gul sone): ekstra inhalasjoner ved behov, maks ${v("martMaks")||8} per døgn, i inntil ${v("gDogn")} døgn.`);
+  if (v("rPuff")) L.push(`Akutt (rød sone): ${v("rPuff")} ${mart?"inhalasjoner":b.e} ${b.navn}, gjentas hvert ${v("rMin")}. min første time ved behov.`);
+  if ($("pred").checked) L.push(`Prednisolon etter avtale: ${v("predMg")} mg x 1 i ${v("predD")} dager (${v("predTab")} tabletter).`);
+  const tr = TRIGGERE.filter((t,i) => $("tr"+i)?.checked); if (v("tPollen")) tr.push("pollen: " + v("tPollen")); if (v("tAnnet")) tr.push(v("tAnnet"));
+  if (tr.length) L.push("Triggere: " + tr.join(", ") + ".");
+  if (v("allergi")) L.push("Bekreftet allergi: " + v("allergi") + ".");
+  L.push("Gjennomgått inhalasjonsteknikk, røykfritt miljø og vaksiner (influensa årlig, vurdere pneumokokk og covid).");
+  const vs = varsler();
+  if (vs.ol.length && $("olOk").checked) L.push("Off label, vurdert av forordnende lege: " + vs.ol.join(" "));
+  if (vs.d.length && $("dopOk").checked) L.push("Informert om antidopingregler: " + vs.d.join(" "));
+  L.push(a === "0-5" ? "Plan: vurdere nedtrapping etter 3–6 måneder med god kontroll. Revurdere diagnosen hvis behandlingen ikke virker som forventet." : "Plan: vurdere nedtrapping etter 3–6 måneder med god kontroll.");
+  if (v("lege")) L.push("Forordnende lege: " + v("lege") + ".");
+  if (v("kontroll")) L.push("Neste kontroll: " + v("kontroll") + ".");
+  $("journal").value = L.join("\n");
+}
+const REM = {
+  alle: "Vurder nedtrapping når astma har vært godt kontrollert i 3–6 måneder. Trapp ned gradvis til laveste dose som gir god kontroll.",
+  "0-5": "Virker ikke behandlingen som forventet? Sjekk inhalasjonsteknikk, kammer og etterlevelse, og revurder diagnosen (veileder 7.8.1, GINA)."
+};
+function reminders(){
+  const a = age();
+  $("remList").innerHTML = [a === "0-5" ? REM["0-5"] : "", REM.alle].filter(Boolean).map(x => `<li>${esc(x)}</li>`).join("");
+}
+function fit(){
+  const w = $("pw").clientWidth, z = Math.min(1, (w - 4) / 794);
+  $("plan").style.zoom = z > 0 ? z : 1;
+}
+addEventListener("resize", fit);
+function update(){ reminders(); if ((opplegg() === "mart") !== !!$("martP")) setupBehov(); varsler(); hints(); renderPlan(); journal(); }
+
+/* ===================== HENDELSER ===================== */
+document.querySelectorAll('input[name=age]').forEach(r => r.addEventListener("change", onAge));
+document.querySelectorAll('input[name=opplegg]').forEach(r => r.addEventListener("change", () => { setupBehov(); update(); }));
+$("f").addEventListener("input", e => { if (!e.target.closest("#vedl") || true) update(); });
+$("f").addEventListener("change", update);
+$("f").addEventListener("submit", e => e.preventDefault());
+$("addVedl").addEventListener("click", () => { if ($("vedl").children.length < 3) addVedl(); update(); });
+async function copyJ(btn){
+  journal();
+  try { await navigator.clipboard.writeText($("journal").value); btn.textContent = "Kopiert ✓"; }
+  catch { $("journal").select(); btn.textContent = "Merket. Trykk Ctrl+C"; }
+  setTimeout(() => btn.textContent = "Kopier journaltekst", 2200);
+}
+$("copy").addEventListener("click", e => copyJ(e.currentTarget));
+$("copy2").addEventListener("click", e => copyJ(e.currentTarget));
+const framed = (() => { try { return window.self !== window.top; } catch { return true; } })();
+if (framed){ $("print").hidden = true;
+  $("printNote").textContent = "Utskrift virker ikke her. Åpne filen astmaplan.html i Edge eller Chrome for å skrive ut eller lagre som PDF."; }
+$("print").addEventListener("click", () => {
+  const vs = varsler();
+  if (vs.ol.length && !$("olOk").checked){ $("printNote").className = "hint warn"; $("printNote").textContent = "Bekreft off label-varselet før utskrift."; $("olBox").scrollIntoView({block:"center"}); return; }
+  $("printNote").className = "hint"; $("printNote").textContent = ""; window.print();
+});
+$("reset").addEventListener("click", () => { $("f").reset(); $("olOk").checked = false; $("dopOk").checked = false; $("dato").value = new Date().toLocaleDateString("nb-NO"); onAge(); });
+$("example").addEventListener("click", () => {
+  $("age611").checked = true; onAge(); $("eos").value = "0,3";
+  Object.entries({navn:"EKSEMPEL Testbarn", fdato:"01.01.2017", vekt:"30", lege:"Lege Eksempel", tlf:"73 00 00 00", dato:new Date().toLocaleDateString("nb-NO"), kontroll:"om 3 måneder", mdato:new Date().toLocaleDateString("nb-NO"), fev1:"88", akt:"21", feno:"32", gPuff:"4", rPuff:"6", allergi:"bjørkepollen"}).forEach(([k,x]) => $(k).value = x);
+  const id = $("vedl").querySelector(".med").dataset.row; $(id+"p").value = "flutide_a"; fillStrength(id, true);
+  $("kMunn").checked = true; $("tr0").checked = true; $("tr1").checked = true; $("tPollen").value = "bjørk";
+  update();
+});
+$("dato").value = new Date().toLocaleDateString("nb-NO");
+onAge(); fit();
+</script>
