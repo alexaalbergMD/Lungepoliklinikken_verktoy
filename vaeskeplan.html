@@ -211,9 +211,11 @@ button { font: inherit; font-weight: 700; background: var(--navy); color: var(--
   <section class="src">
     <h2>Grunnlag</h2>
     <p>Rehydrering 10 ml/kg/time i 4–6 timer, underskudd ved mild og moderat dehydrering, ORS (GEM, Resorb), ondansetron-doser og risikogrupper: Klingenberg C mfl. Akutt gastroenteritt og dehydrering, kap. 5.3 i Akuttveileder i pediatri (Norsk barnelegeforening, helsebiblioteket.no), sist faglig oppdatert 2021.</p>
-    <p>Ondansetron 0,1–0,2 mg/kg inntil 3 ganger: lokal praksis.</p>
+    <p>Ondansetron 0,1 mg/kg per dose ved behov, maks 3 ganger daglig med 4 timers mellomrom, maks 8 mg per dose, fra 1 måned: KOBLE, Kunnskapsbase for legemidler til barn, ondansetron (koble.info/legemiddel/8679/ondansetron), lest 07.11.2026. KOBLE bygger på det nederlandske Kinderformularium. Kinderformularium.nl kunne ikke leses direkte.</p>
+    <p>Ondansetron 0,1–0,2 mg/kg inntil 3 ganger: lokal praksis ved Barne- og ungdomsklinikken, St. Olavs hospital.</p>
     <p>Gradering av dehydrering etter tabellen i Akuttveileder 5.3: vekttap under 5 %, 5–9 % og 10 % eller mer, med kliniske tegn. Regelen om minst to tegn for moderat er lagt til i verktøyet.</p>
-    <p>Vedlikehold etter Holliday–Segar (valgt av avdelingen). Tillegg for nye tap (10 ml/kg per vandig diaré, 2 ml/kg per oppkast) og minst 4 tiss per døgn er vanlige tommelfingerregler som ikke står i Akuttveilederen.</p>
+    <p>Vedlikehold: Holliday MA, Segar WE. The maintenance need for water in parenteral fluid therapy. Pediatrics 1957;19(5):823–32.</p>
+    <p>Tillegg for nye tap (10 ml/kg per vandig diaré, 2 ml/kg per oppkast) og minst 4 tiss per døgn: vanlige tommelfingerregler. Ingen verifisert kilde er funnet ennå.</p>
     <p>Verktøyet er et hjelpemiddel. Planen skal alltid vurderes klinisk.</p>
   </section>
 </div>
@@ -278,7 +280,7 @@ function calc() {
     $("warns").innerHTML = `<div class="warn red">Skriv inn en vekt i kilo, for eksempel 12,5.</div>`;
     return;
   }
-  if (months < 6) warns.push(["red", "Under 6 måneder: risikogruppe for alvorlig dehydrering. Ondansetron er ikke anbefalt."]);
+  if (months < 6) warns.push(["red", "Under 6 måneder: risikogruppe for alvorlig dehydrering. Akuttveilederen gir ikke dose av ondansetron under 6 måneder og 8 kg, mens KOBLE gir dose fra 1 måned."]);
   if (grad === "alvorlig") warns.push(["red", "Alvorlig dehydrering: intravenøs væskebehandling på sykehus. Fase 1 under gjelder ikke."]);
   if (grad === "moderat") warns.push(["red", "Moderat dehydrering skal behandles på sykehus (Akuttveileder 5.3). Planen under gjelder rehydrering under observasjon."]);
   $("warns").innerHTML = warns.map(([c, t]) => `<div class="warn ${c}">${t}</div>`).join("");
@@ -308,18 +310,21 @@ function calc() {
 
   // Zofran
   let zDose = "", zG = "";
-  if (months < 6 || w < 8) {
+  if (months < 1) {
     $("zrows").innerHTML = row("Ondansetron", "Ikke anbefalt");
-    $("zcalc").textContent = "Akuttveilederen gir dosering fra 6 måneder og 8 kg.";
+    $("zcalc").textContent = "KOBLE gir dosering fra 1 måned.";
   } else {
+    const koble = Math.min(Math.round(0.1 * w * 10) / 10, 8);
     const lo = Math.min(roundHalf(0.1 * w), 8), hi = Math.min(roundHalf(0.2 * w), 8);
     const band = zofranBand(w);
-    zDose = band.replace(" mg", ""); zG = "3";
+    zDose = fmtKg(koble); zG = "3";
     $("zrows").innerHTML =
-      row("0,1–0,2 mg/kg", `${fmtKg(lo)}–${fmtKg(hi)} mg`) +
-      row("Akuttveileder, vektgruppe", band) +
-      row("Inntil", "3 ganger per døgn");
-    $("zcalc").textContent = "Enkeltdose peroralt. Kan gi litt mer diaré.";
+      row("KOBLE, 0,1 mg/kg", `${fmtKg(koble)} mg`) +
+      row("Lokal praksis, 0,1–0,2 mg/kg", `${fmtKg(lo)}–${fmtKg(hi)} mg`) +
+      row("Akuttveileder, vektgruppe", band && months >= 6 ? band : "Ikke angitt under 6 mnd / 8 kg") +
+      row("Inntil", "3 ganger per døgn, minst 4 timer mellom") +
+      row("Maks enkeltdose", "8 mg");
+    $("zcalc").textContent = "Peroralt ved behov. Kan gi litt mer diaré. Forslaget til skrivet følger KOBLE.";
   }
 
   // Skrivet
@@ -376,10 +381,18 @@ async function makePdf() {
       set("zofran_dose", $("pzdose").value); set("zofran_ganger", "3");
     }
     const out = await doc.save();
-    const dl = await claude.use("downloads");
-    if (!dl) return fail("Nedlasting er ikke tilgjengelig her. Åpne siden i claude.ai.");
     const navn = ($("pnavn").value || "").trim().replace(/[^\p{L}\p{N} -]/gu, "").replace(/\s+/g, "_");
-    await dl.save({ filename: "Omgangssyke_hjemreise" + (navn ? "_" + navn : "") + ".pdf", data: new Blob([out]) });
+    const filename = "Omgangssyke_hjemreise" + (navn ? "_" + navn : "") + ".pdf";
+    const blob = new Blob([out], { type: "application/pdf" });
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (dl) {
+      await dl.save({ filename, data: blob });
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    }
     st.textContent = "Skrivet er lastet ned.";
   } catch (e) {
     if (e && e.code === "declined") { st.textContent = "Nedlastingen ble avbrutt."; return; }
