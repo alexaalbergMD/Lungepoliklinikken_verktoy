@@ -81,6 +81,7 @@ button.link:hover{color:var(--fg); background:none}
 .notice{font-size:13px; color:var(--muted); background:var(--panel); border:1px solid var(--border); padding:10px 14px}
 .notice summary{cursor:pointer; color:var(--fg); font-weight:600}
 .notice p{margin:6px 0 0}
+.notice .src{margin:4px 0 0; padding-left:18px}
 .formfoot{display:flex; justify-content:space-between; align-items:center; gap:12px}
 .previewcol{min-width:0}
 .sticky{position:sticky; top:0; max-height:100vh; overflow:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:16px}
@@ -169,8 +170,17 @@ button.link:hover{color:var(--fg); background:none}
 
 <div class="wrap">
 <form id="f" autocomplete="off">
-  <details class="notice" id="safety"><summary>Forslag til dose. Legen bestemmer.</summary>
-    <p>Forslagene bygger på Generell veileder i pediatri (7.8.1 og 7.8.2), Akuttveileder 7.2, GINA 2026 og Felleskatalogen. Bare Symbicort, Alvesco og Singulair er kontrollert mot Felleskatalogen. De andre er merket. Ingenting lagres. Alt forsvinner når siden lukkes.</p></details>
+  <details class="notice" id="safety"><summary>Kilder og forbehold. Forslag til dose, legen bestemmer.</summary>
+    <p><b>Kilder:</b></p>
+    <ul class="src">
+      <li>GINA 2026 (ginasthma.org): trinn, MART, ICS-doser.</li>
+      <li>Generell veileder i pediatri 7.8.1 Astma hos barn ≤ 5 år og 7.8.2 Astma bronkiale 6–18 år (helsebiblioteket.no): doser og dosegrenser for inhalasjonssteroid.</li>
+      <li>Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no): akuttdoser salbutamol og prednisolon.</li>
+      <li>Felleskatalogen: styrker og aldersgrenser. Bare Symbicort, Alvesco og Singulair er kontrollert. De andre er merket.</li>
+      <li>Kinderformularium (kinderformularium.nl): prednisolon ved astma, maks per døgn etter alder.</li>
+      <li>WADAs dopingliste og antidoping.no: antidopingvarsler.</li>
+    </ul>
+    <p>KOBLE (koble.info) kunne ikke leses automatisk og er ikke brukt ennå. Ingenting lagres. Alt forsvinner når siden lukkes.</p></details>
 
   <fieldset>
     <legend><b>1</b>Pasient</legend>
@@ -394,7 +404,7 @@ const TXT = {
         "<b>Kulde:</b> Buff eller kaldluftsmaske kan hjelpe.",
         "<b>Lek og aktivitet</b> er bra for barnet. Hoster barnet ofte ved lek, latter eller gråt? Si fra til legen.",
         "<b>Kammer:</b> Ett puff om gangen og 5 rolige pust. Prøv når barnet er rolig, et gråtende barn får i seg lite medisin."],
-   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.1 Astma hos barn ≤ 5 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen."},
+   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.1 Astma hos barn ≤ 5 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen · Kinderformularium (prednisolon)."},
  "6-11":{tittel:"Min astmaplan 6–11 år", under:"For barn, foreldre og skole.",
    gTegn:["Jeg sover godt og våkner ikke av hoste","Jeg kan leke og ha gym som andre","Jeg har lite eller ingen hoste og tung pust","Jeg trenger behovsmedisin høyst 2 ganger i uken"],
    yTegn:["Jeg hoster mer, særlig om natten","Jeg piper eller blir tung i pusten","Jeg trenger behovsmedisin oftere enn vanlig","Jeg orker mindre i gym og lek"],
@@ -408,7 +418,7 @@ const TXT = {
         "<b>Pollen:</b> Ved pollenallergi kan forebyggende medisin startes noen uker før sesongen, etter avtale.",
         "<b>Trening er bra!</b> Bruk buff eller kaldluftsmaske i kulde. Får du astma: stopp, ta behovsmedisin og fortsett når det har gått over.",
         "<b>Kammer:</b> Ett puff om gangen og 5 rolige pust. Skyll munnen etter inhalasjonssteroid."],
-   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.2 Astma bronkiale 6–18 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen."},
+   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.2 Astma bronkiale 6–18 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen · Kinderformularium (prednisolon)."},
  "12+":{tittel:"Min astmaplan 12+ år", under:"For ungdom.",
    gTegn:["Lite eller ingen plager på dagtid","Jeg våkner ikke av astma","Jeg kan trene som jeg vil","Jeg trenger ekstra medisin høyst 2 ganger i uken"],
    yTegn:["Jeg hoster, piper eller kjenner tetthet i brystet","Jeg våkner om natten av astma","Jeg trenger oftere ekstra medisin","Jeg orker mindre trening"],
@@ -422,7 +432,7 @@ const TXT = {
         "<b>Pollen:</b> Ved pollenallergi kan forebyggende medisin startes noen uker før sesongen.",
         "<b>Trening er bra!</b> Buff i kulde. Konkurrerer du? Se antidoping.no.",
         "<b>Pulverinhalator:</b> Pust ut, så raskt og dypt inn. Hold pusten 5–10 sek. Skyll munnen. Ha alltid med deg medisinen."],
-   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.2 Astma bronkiale 6–18 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen."}
+   kilde:"GINA 2026 (ginasthma.org) · Generell veileder i pediatri 7.8.2 Astma bronkiale 6–18 år · Akuttveileder i pediatri 7.2 Akutt astma (helsebiblioteket.no) · Felleskatalogen · Kinderformularium (prednisolon)."}
 };
 /* QR-kode og lenke til film om inhalasjonsteknikk (samme som i PDF-ene) */
 const INHAL_URL = "https://www.helsenorge.no/sykdom/lunger-og-luftveier/astma/";
@@ -666,13 +676,21 @@ function hints(){
     $("martHint").textContent = a === "6-11" ? "Veileder: maks 8 inhalasjoner per døgn for 6–11 år." : "Veileder: maks 12 per døgn i en kort periode. Over 8 per døgn: kontakt lege.";
   }
   $("gHint").textContent = "Veileder: ved forverring ofte 0,4–1,0 mg salbutamol (4–10 puff à 0,1 mg). Kontakt lege hvis behov oftere enn hver 4. time (akuttveileder).";
-  const w = num(v("vekt"));
-  if (w){ const lo = Math.min(40, Math.round(w / 5) * 5 || 5), hi = Math.min(40, Math.round(w * 2 / 5) * 5);
-    $("predHint").textContent = `Vekt ${fmt(w)} kg: 1–2 mg/kg gir ${lo}–${hi} mg x 1 (avrundet til nærmeste 5 mg, maks 40 mg). Vanlig varighet 3–5 dager.`;
-  } else $("predHint").textContent = "Fyll inn vekt for doseforslag (1–2 mg/kg x 1, maks 40 mg, 3–5 dager).";
+  const w = num(v("vekt")), pm = predMax();
+  const maksTxt = pm ? `maks ${pm} mg` : "maks 20 mg under 2 år, 30 mg 2–5 år";
+  if (w){ const cap = pm || 30, lo = Math.min(cap, Math.round(w / 5) * 5 || 5), hi = Math.min(cap, Math.round(w * 2 / 5) * 5);
+    $("predHint").textContent = `Vekt ${fmt(w)} kg: 1–2 mg/kg gir ${lo === hi ? lo : lo + "–" + hi} mg per døgn (avrundet til nærmeste 5 mg, ${maksTxt}). Vanlig varighet 3–5 dager. Veilederen gir dosen x 1. Kinderformularium deler den gjerne på 2 doser.`;
+  } else $("predHint").textContent = `Fyll inn vekt for doseforslag (1–2 mg/kg per døgn, ${maksTxt}, 3–5 dager).`;
   const mg = num(v("predMg")); $("predRow").hidden = !$("pred").checked;
-  if ($("pred").checked && mg && w && (mg > 40 || mg > 2 * w + 2.5)){ $("predHint").className = "hint warn"; $("predHint").textContent += " Valgt dose er over 2 mg/kg eller 40 mg."; }
+  if ($("pred").checked && mg && ((w && mg > 2 * w + 2.5) || mg > (pm || 40))){ $("predHint").className = "hint warn"; $("predHint").textContent += ` Valgt dose er over 2 mg/kg eller over ${pm || 40} mg.`; }
   else $("predHint").className = "hint";
+}
+/* Prednisolon, maks per døgn etter alder (Kinderformularium): under 2 år 20 mg, 2–5 år 30 mg, over 5 år 40 mg.
+   Uten fødselsdato i 0–5-gruppen: null (begge grenser vises). */
+function predMax(){
+  const a = age(), harF = /^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}$/.test(v("fdato"));
+  if (!harF) return a === "0-5" ? null : 40;
+  const y = alderAar(); return y < 2 ? 20 : y < 6 ? 30 : 40;
 }
 /* ---------- off label og antidoping ---------- */
 let olSig = "";
@@ -736,6 +754,7 @@ function journal(){
   if (vs.ol.length && $("olOk").checked) L.push("Off label, vurdert av forordnende lege: " + vs.ol.join(" "));
   if (vs.d.length && $("dopOk").checked) L.push("Informert om antidopingregler: " + vs.d.join(" "));
   L.push(a === "0-5" ? "Plan: vurdere nedtrapping etter 3–6 måneder med god kontroll. Revurdere diagnosen hvis behandlingen ikke virker som forventet." : "Plan: vurdere nedtrapping etter 3–6 måneder med god kontroll.");
+  L.push("Kilder: GINA 2026, Generell veileder i pediatri 7.8.1/7.8.2, Akuttveileder i pediatri 7.2, Felleskatalogen, Kinderformularium.");
   if (v("lege")) L.push("Forordnende lege: " + v("lege") + ".");
   if (v("kontroll")) L.push("Neste kontroll: " + v("kontroll") + ".");
   $("journal").value = L.join("\n");
